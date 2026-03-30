@@ -18,11 +18,12 @@ export function AuthProvider({ children }) {
     };
 
     const logout = () => {
-        localStorage.removeItem("access");
-        localStorage.removeItem("refresh");
-        localStorage.removeItem("user");
-        setUser(null);
-    };
+    localStorage.removeItem("access");
+    localStorage.removeItem("refresh");
+    localStorage.removeItem("user");
+    localStorage.removeItem("activeWorkspaceId");
+    setUser(null);
+};
 
     const loadUser = async () => {
         try {

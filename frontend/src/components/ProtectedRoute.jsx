@@ -5,7 +5,11 @@ function ProtectedRoute({ children }) {
     const { user, loading } = useAuth();
 
     if (loading) {
-        return <h2 style={{ padding: "40px" }}>Loading...</h2>;
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
+                <p className="text-lg">Checking authentication...</p>
+            </div>
+        );
     }
 
     if (!user) {
