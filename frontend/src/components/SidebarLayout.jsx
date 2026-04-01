@@ -78,6 +78,9 @@ function SidebarLayout() {
                         <NavLink to="/dashboard/members" className={navItemClass}>
                             Members
                         </NavLink>
+                        <NavLink to="/dashboard/billing" className={navItemClass}>
+                            Billing
+                        </NavLink>
                     </nav>
 
                     {/* Logout */}

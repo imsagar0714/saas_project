@@ -70,7 +70,7 @@ function MemberSection() {
     }, [activeWorkspace]);
 
     return (
-        <div className="mt-8 space-y-8">
+        <div className="space-y-8">
             {/* Add Member */}
             <div className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-lg backdrop-blur">
                 <h2 className="mb-4 text-2xl font-bold text-white">Add Team Member</h2>

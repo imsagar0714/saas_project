@@ -5,7 +5,7 @@ import Login from "./pages/Login";
 import DashboardHome from "./pages/DashboardHome";
 import ProjectsPage from "./pages/ProjectsPage";
 import MembersPage from "./pages/MembersPage";
-
+import BillingPage from "./pages/BillingPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SidebarLayout from "./components/SidebarLayout";
 
@@ -49,6 +49,7 @@ function App() {
                 <Route index element={<DashboardHome />} />
                 <Route path="projects" element={<ProjectsPage />} />
                 <Route path="members" element={<MembersPage />} />
+                <Route path="billing" element={<BillingPage />} />
             </Route>
 
             {/* Fallback */}

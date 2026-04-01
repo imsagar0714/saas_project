@@ -1,11 +1,18 @@
-from .models import Membership,Tenant
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 
 from accounts.models import User
-from .serializers import MembershipSerializer, AddMemberSerializer
+from .models import Membership, Invitation, Plan, WorkspaceSubscription
+from .serializers import (
+    MembershipSerializer,
+    AddMemberSerializer,
+    InvitationSerializer,
+    CreateInvitationSerializer,
+    PlanSerializer,
+    WorkspaceSubscriptionSerializer,
+)
 from .mixins import TenantAccessMixin
 
 
@@ -57,7 +64,7 @@ class CurrentWorkspaceView(APIView):
 class MemberListCreateView(TenantAccessMixin, APIView):
     permission_classes = [IsAuthenticated]
 
-    # 🔹 List members → all members can view
+    # List all members in active workspace
     def get(self, request):
         tenant, membership, error = self.get_active_membership(request)
         if error:
@@ -67,7 +74,6 @@ class MemberListCreateView(TenantAccessMixin, APIView):
         serializer = MembershipSerializer(members, many=True)
         return Response(serializer.data)
 
-    # 🔹 Add member → admin only
     def post(self, request):
         tenant, membership, error = self.get_active_membership(request)
         if error:
@@ -76,6 +82,26 @@ class MemberListCreateView(TenantAccessMixin, APIView):
         if membership.role != "admin":
             return Response(
                 {"detail": "Only admins can add members."},
+                status=403
+            )
+
+        #  BILLING CHECK: Member limit
+        subscription = getattr(tenant, "subscription", None)
+
+        if not subscription or not subscription.plan:
+            return Response(
+                {"detail": "Workspace subscription is not configured properly."},
+                status=400
+            )
+
+        current_member_count = Membership.objects.filter(tenant=tenant).count()
+        max_members_allowed = subscription.plan.max_members
+
+        if current_member_count >= max_members_allowed:
+            return Response(
+                {
+                    "detail": f"Member limit reached for your current plan ({subscription.plan.name}). Upgrade to add more members."
+                },
                 status=403
             )
 
@@ -109,6 +135,7 @@ class MemberListCreateView(TenantAccessMixin, APIView):
             MembershipSerializer(new_membership).data,
             status=status.HTTP_201_CREATED
         )
+    
 
 
 class MemberDetailView(TenantAccessMixin, APIView):
@@ -132,7 +159,7 @@ class MemberDetailView(TenantAccessMixin, APIView):
 
         return target_membership, current_membership, None
 
-    # 🔹 Update role → admin only
+    # Update role (admin only)
     def put(self, request, membership_id):
         target_membership, current_membership, error = self.get_membership_object(request, membership_id)
         if error:
@@ -157,7 +184,7 @@ class MemberDetailView(TenantAccessMixin, APIView):
 
         return Response(MembershipSerializer(target_membership).data)
 
-    # 🔹 Remove member → admin only
+    # Remove member (admin only)
     def delete(self, request, membership_id):
         target_membership, current_membership, error = self.get_membership_object(request, membership_id)
         if error:
@@ -169,7 +196,7 @@ class MemberDetailView(TenantAccessMixin, APIView):
                 status=403
             )
 
-        # Prevent removing yourself if you are the only admin (simple safety)
+        # Prevent removing the only admin
         if target_membership.user == request.user and target_membership.role == "admin":
             admin_count = Membership.objects.filter(
                 tenant=target_membership.tenant,
@@ -187,3 +214,187 @@ class MemberDetailView(TenantAccessMixin, APIView):
             {"detail": "Member removed successfully."},
             status=200
         )
+        
+class InvitationListCreateView(TenantAccessMixin, APIView):
+    permission_classes = [IsAuthenticated]
+
+    # List pending invitations of active workspace
+    def get(self, request):
+        tenant, membership, error = self.get_active_membership(request)
+        if error:
+            return error
+
+        invitations = Invitation.objects.filter(
+            tenant=tenant,
+            is_accepted=False
+        ).order_by("-created_at")
+
+        serializer = InvitationSerializer(invitations, many=True)
+        return Response(serializer.data)
+
+    # Create invitation (admin only)
+    def post(self, request):
+        tenant, membership, error = self.get_active_membership(request)
+        if error:
+            return error
+
+        # 🔹 RBAC check
+        if membership.role != "admin":
+            return Response(
+                {"detail": "Only admins can invite members."},
+                status=403
+            )
+
+        # BILLING CHECK (ADD THIS HERE)
+        subscription = getattr(tenant, "subscription", None)
+
+        if not subscription or not subscription.plan:
+            return Response(
+                {"detail": "Workspace subscription is not configured properly."},
+                status=400
+            )
+
+        if not subscription.plan.can_invite:
+            return Response(
+                {
+                    "detail": f"Invitations are not available on your current plan ({subscription.plan.name}). Upgrade to use this feature."
+                },
+                status=403
+            )
+
+        # 🔹 Request validation
+        serializer = CreateInvitationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data["email"]
+        role = serializer.validated_data["role"]
+
+        # 🔹 already member?
+        existing_user = User.objects.filter(email=email).first()
+        if existing_user and Membership.objects.filter(user=existing_user, tenant=tenant).exists():
+            return Response(
+                {"detail": "User is already a member of this workspace."},
+                status=400
+            )
+
+        # 🔹 already invited?
+        if Invitation.objects.filter(tenant=tenant, email=email, is_accepted=False).exists():
+            return Response(
+                {"detail": "This email is already invited to this workspace."},
+                status=400
+            )
+
+        # 🔹 create invite
+        invitation = Invitation.objects.create(
+            tenant=tenant,
+            email=email,
+            role=role,
+            invited_by=request.user
+        )
+
+        return Response(
+            InvitationSerializer(invitation).data,
+            status=status.HTTP_201_CREATED
+        )
+
+
+class InvitationAcceptView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, invitation_id):
+        try:
+            invitation = Invitation.objects.get(id=invitation_id, is_accepted=False)
+        except Invitation.DoesNotExist:
+            return Response(
+                {"detail": "Invitation not found or already accepted."},
+                status=404
+            )
+
+        # email match check
+        if request.user.email.lower() != invitation.email.lower():
+            return Response(
+                {"detail": "This invitation is not for your account."},
+                status=403
+            )
+
+        # already member?
+        if Membership.objects.filter(user=request.user, tenant=invitation.tenant).exists():
+            return Response(
+                {"detail": "You are already a member of this workspace."},
+                status=400
+            )
+
+        Membership.objects.create(
+            user=request.user,
+            tenant=invitation.tenant,
+            role=invitation.role
+        )
+
+        invitation.is_accepted = True
+        invitation.save()
+
+        return Response(
+            {"detail": "Invitation accepted successfully."},
+            status=200
+        )
+
+
+class InvitationDeleteView(TenantAccessMixin, APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, invitation_id):
+        tenant, membership, error = self.get_active_membership(request)
+        if error:
+            return error
+
+        if membership.role != "admin":
+            return Response(
+                {"detail": "Only admins can cancel invitations."},
+                status=403
+            )
+
+        try:
+            invitation = Invitation.objects.get(
+                id=invitation_id,
+                tenant=tenant,
+                is_accepted=False
+            )
+        except Invitation.DoesNotExist:
+            return Response(
+                {"detail": "Invitation not found."},
+                status=404
+            )
+
+        invitation.delete()
+        return Response(
+            {"detail": "Invitation cancelled successfully."},
+            status=200
+        )
+        
+class CurrentBillingView(TenantAccessMixin, APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        tenant, membership, error = self.get_active_membership(request)
+        if error:
+            return error
+
+        subscription = getattr(tenant, "subscription", None)
+
+        if not subscription:
+            return Response(
+                {"detail": "No subscription found for this workspace."},
+                status=404
+            )
+
+        serializer = WorkspaceSubscriptionSerializer(subscription)
+        return Response(serializer.data)
+
+
+class PlanListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        plans = Plan.objects.all().order_by("price_monthly")
+        serializer = PlanSerializer(plans, many=True)
+        return Response(serializer.data)
