@@ -1,0 +1,12 @@
+from django.urls import path
+from .views import (
+    CurrentBillingView,
+    PlanListView,
+    CreateSubscriptionView,
+)
+
+urlpatterns = [
+    path("current/", CurrentBillingView.as_view()),
+    path("plans/", PlanListView.as_view()),
+    path("subscribe/", CreateSubscriptionView.as_view()),
+]

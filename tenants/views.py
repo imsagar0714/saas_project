@@ -4,14 +4,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 
 from accounts.models import User
-from .models import Membership, Invitation, Plan, WorkspaceSubscription
+from .models import Membership, Invitation , Tenant
+from billing.models import Plan, WorkspaceSubscription
 from .serializers import (
     MembershipSerializer,
     AddMemberSerializer,
     InvitationSerializer,
     CreateInvitationSerializer,
-    PlanSerializer,
-    WorkspaceSubscriptionSerializer,
 )
 from .mixins import TenantAccessMixin
 
@@ -371,30 +370,3 @@ class InvitationDeleteView(TenantAccessMixin, APIView):
             status=200
         )
         
-class CurrentBillingView(TenantAccessMixin, APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        tenant, membership, error = self.get_active_membership(request)
-        if error:
-            return error
-
-        subscription = getattr(tenant, "subscription", None)
-
-        if not subscription:
-            return Response(
-                {"detail": "No subscription found for this workspace."},
-                status=404
-            )
-
-        serializer = WorkspaceSubscriptionSerializer(subscription)
-        return Response(serializer.data)
-
-
-class PlanListView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        plans = Plan.objects.all().order_by("price_monthly")
-        serializer = PlanSerializer(plans, many=True)
-        return Response(serializer.data)

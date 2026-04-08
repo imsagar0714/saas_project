@@ -7,8 +7,6 @@ from .views import (
     InvitationListCreateView,
     InvitationAcceptView,
     InvitationDeleteView,
-    CurrentBillingView,
-    PlanListView,
 )
 
 urlpatterns = [
@@ -22,6 +20,4 @@ urlpatterns = [
     path("invitations/<int:invitation_id>/accept/", InvitationAcceptView.as_view(), name="accept-invitation"),
     path("invitations/<int:invitation_id>/", InvitationDeleteView.as_view(), name="delete-invitation"),
 
-    path("billing/current/", CurrentBillingView.as_view(), name="billing-current"),
-    path("billing/plans/", PlanListView.as_view(), name="billing-plans"),
 ]

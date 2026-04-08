@@ -1,7 +1,8 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from .models import Tenant, Plan, WorkspaceSubscription
+from .models import Tenant
+from billing.models import Plan, WorkspaceSubscription
 
 
 @receiver(post_save, sender=Tenant)
