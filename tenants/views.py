@@ -23,7 +23,6 @@ class MyWorkspacesView(APIView):
         serializer = MembershipSerializer(memberships, many=True)
         return Response(serializer.data)
     
-    
 class CreateWorkspaceView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -39,22 +38,23 @@ class CreateWorkspaceView(APIView):
         # 1. Create Tenant
         tenant = Tenant.objects.create(name=name)
 
-        # 2. Create Membership (admin)
-        membership = Membership.objects.create(
+        # 2. Create Membership
+        Membership.objects.create(
             user=request.user,
             tenant=tenant,
             role="admin"
         )
 
-        # 3. Assign FREE Plan
-        try:
-            free_plan = Plan.objects.get(name__iexact="free")
-        except Plan.DoesNotExist:
+        # 3. Assign Free Plan (SAFE)
+        free_plan = Plan.objects.filter(name__iexact="free").first()
+
+        if not free_plan:
             return Response(
-                {"detail": "Free plan not found"},
+                {"detail": "Free plan not found. Create it in admin."},
                 status=400
             )
 
+        # 4. Create Subscription
         WorkspaceSubscription.objects.create(
             tenant=tenant,
             plan=free_plan,
@@ -69,6 +69,7 @@ class CreateWorkspaceView(APIView):
             },
             status=status.HTTP_201_CREATED
         )
+
 class CurrentWorkspaceView(APIView):
     permission_classes = [IsAuthenticated]
 
