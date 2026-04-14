@@ -26,6 +26,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-dev-key")
 DEBUG = os.getenv("DEBUG", "True") == "True"
 
 ALLOWED_HOSTS = os.getenv(
+    "web-production-e6a99.up.railway.app",
     "ALLOWED_HOSTS",
     "127.0.0.1,localhost"
 ).split(",")
@@ -128,7 +129,9 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
-
+CSRF_TRUSTED_ORIGINS = [
+    "https://web-production-e6a99.up.railway.app"
+]
 # -----------------------------
 # CORS
 # -----------------------------
