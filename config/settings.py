@@ -21,27 +21,26 @@ load_dotenv()
 # -----------------------------
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-dev-key")
 
-DEBUG = os.getenv("DEBUG", "True") == "True"
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = os.getenv(
     "ALLOWED_HOSTS",
     "web-production-e6a99.up.railway.app,127.0.0.1,localhost"
 ).split(",")
 
-CSRF_TRUSTED_ORIGINS = [
+CSRF_TRUSTED_ORIGINS = os.getenv(
+    "CSRF_TRUSTED_ORIGINS",
     "https://web-production-e6a99.up.railway.app"
-]
+).split(",")
 
 # -----------------------------
 # Installed apps
 # -----------------------------
 INSTALLED_APPS = [
-    # Third-party
     'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
 
-    # Django
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -49,7 +48,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    # Local apps
     'accounts',
     'tenants.apps.TenantsConfig',
     'billing',
@@ -102,15 +100,26 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # -----------------------------
-# Database (Neon / Railway)
+# Database (SAFE FIX)
 # -----------------------------
-DATABASES = {
-    "default": dj_database_url.parse(
-        os.getenv("DATABASE_URL"),
-        conn_max_age=600,
-        ssl_require=True,
-    )
-}
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if DATABASE_URL:
+    DATABASES = {
+        "default": dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=True,
+        )
+    }
+else:
+    # fallback for local dev (IMPORTANT)
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 # -----------------------------
 # DRF + JWT
@@ -163,14 +172,12 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # -----------------------------
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
 USE_TZ = True
 
 # -----------------------------
-# Static files (IMPORTANT)
+# Static files (FIXED FOR PROD)
 # -----------------------------
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
