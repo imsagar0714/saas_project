@@ -1,7 +1,9 @@
 import axios from "axios";
 
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 const API = axios.create({
-    baseURL: "http://127.0.0.1:8000/api",
+    baseURL: `${BASE_URL}/api`,
 });
 
 API.interceptors.request.use((config) => {
@@ -29,14 +31,13 @@ API.interceptors.response.use(
 
             const refresh = localStorage.getItem("refresh");
 
-            if (!refresh) {
-                return Promise.reject(error);
-            }
+            if (!refresh) return Promise.reject(error);
 
             try {
-                const res = await axios.post("http://127.0.0.1:8000/api/token/refresh/", {
-                    refresh: refresh,
-                });
+                const res = await axios.post(
+                    `${BASE_URL}/api/token/refresh/`,
+                    { refresh }
+                );
 
                 const newAccess = res.data.access;
                 localStorage.setItem("access", newAccess);
@@ -44,9 +45,7 @@ API.interceptors.response.use(
                 originalRequest.headers.Authorization = `Bearer ${newAccess}`;
                 return API(originalRequest);
             } catch (refreshError) {
-                localStorage.removeItem("access");
-                localStorage.removeItem("refresh");
-                localStorage.removeItem("activeWorkspaceId");
+                localStorage.clear();
                 return Promise.reject(refreshError);
             }
         }
