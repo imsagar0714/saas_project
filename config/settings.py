@@ -1,7 +1,3 @@
-"""
-Django settings for config project.
-"""
-
 from datetime import timedelta
 from pathlib import Path
 import os
@@ -21,18 +17,18 @@ load_dotenv()
 # -----------------------------
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-dev-key")
 
-#DEBUG = os.getenv("DEBUG", "False") == "True"
-DEBUG=True
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = os.getenv(
     "ALLOWED_HOSTS",
     "web-production-e6a99.up.railway.app,127.0.0.1,localhost"
 ).split(",")
 
-CSRF_TRUSTED_ORIGINS = os.getenv(
-    "CSRF_TRUSTED_ORIGINS",
-    "https://web-production-e6a99.up.railway.app"
-).split(",")
+# ✅ UPDATED (VERY IMPORTANT)
+CSRF_TRUSTED_ORIGINS = [
+    "https://web-production-e6a99.up.railway.app",
+    "https://saas-project-zeta.vercel.app",
+]
 
 # -----------------------------
 # Installed apps
@@ -101,7 +97,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # -----------------------------
-# Database (SAFE FIX)
+# Database (Neon / Railway)
 # -----------------------------
 DATABASE_URL = os.getenv("DATABASE_URL")
 
@@ -114,7 +110,6 @@ if DATABASE_URL:
         )
     }
 else:
-    # fallback for local dev (IMPORTANT)
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -140,12 +135,13 @@ SIMPLE_JWT = {
 }
 
 # -----------------------------
-# CORS
+# ✅ CORS FIXED FOR VERCEL
 # -----------------------------
-CORS_ALLOWED_ORIGINS = os.getenv(
-    "CORS_ALLOWED_ORIGINS",
-    "http://localhost:5173,http://127.0.0.1:5173"
-).split(",")
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://saas-project-zeta.vercel.app",
+]
 
 CORS_ALLOW_HEADERS = list(default_headers) + [
     "x-tenant-id",
@@ -155,18 +151,10 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
 # Password validation
 # -----------------------------
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
 # -----------------------------
@@ -178,7 +166,7 @@ USE_I18N = True
 USE_TZ = True
 
 # -----------------------------
-# Static files (FIXED FOR PROD)
+# Static files
 # -----------------------------
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
@@ -186,17 +174,14 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # -----------------------------
-# Default primary key field type
+# Default primary key field
 # -----------------------------
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # -----------------------------
-# App environment variables
+# App ENV
 # -----------------------------
 RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
 RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET")
 
-FRONTEND_BASE_URL = os.getenv(
-    "FRONTEND_BASE_URL",
-    "http://localhost:5173"
-)
+FRONTEND_BASE_URL = "https://saas-project-zeta.vercel.app"
