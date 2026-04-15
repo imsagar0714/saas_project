@@ -50,8 +50,8 @@ function App() {
                 <Route path="projects" element={<ProjectsPage />} />
                 <Route path="members" element={<MembersPage />} />
                 <Route path="billing" element={<BillingPage />} />
-                <Route path="/pricing" element={<Pricing />} />
             </Route>
+            <Route path="/pricing" element={<Pricing />} />
 
             {/* Fallback */}
             <Route
