@@ -53,10 +53,12 @@ class CreateWorkspaceView(APIView):
                     return Response({"error": "Free plan not found"}, status=500)
 
                 # 4. Create Subscription
-                WorkspaceSubscription.objects.create(
+                subscription, created = WorkspaceSubscription.objects.get_or_create(
                     tenant=tenant,
-                    plan=plan,
-                    status="active"
+                    defaults={
+                        "plan": plan,
+                        "status": "active"
+                    }
                 )
 
             return Response({
