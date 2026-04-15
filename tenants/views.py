@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
-
+from django.db import transaction
 from accounts.models import User
 from .models import Membership, Invitation , Tenant
 from billing.models import Plan, WorkspaceSubscription
@@ -23,52 +23,49 @@ class MyWorkspacesView(APIView):
         serializer = MembershipSerializer(memberships, many=True)
         return Response(serializer.data)
     
+    
 class CreateWorkspaceView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        name = request.data.get("name")
+        try:
+            name = request.data.get("name")
 
-        if not name:
-            return Response(
-                {"detail": "Workspace name is required"},
-                status=400
-            )
+            if not name:
+                return Response({"error": "Name is required"}, status=400)
 
-        # 1. Create Tenant
-        tenant = Tenant.objects.create(name=name)
+            with transaction.atomic():
 
-        # 2. Create Membership
-        Membership.objects.create(
-            user=request.user,
-            tenant=tenant,
-            role="admin"
-        )
+                # 1. Create Tenant
+                tenant = Tenant.objects.create(name=name)
 
-        # 3. Assign Free Plan (SAFE)
-        free_plan = Plan.objects.filter(name__iexact="free").first()
+                # 2. Create Membership
+                Membership.objects.create(
+                    user=request.user,
+                    tenant=tenant,
+                    role="owner"
+                )
 
-        if not free_plan:
-            return Response(
-                {"detail": "Free plan not found. Create it in admin."},
-                status=400
-            )
+                # 3. Get Free Plan
+                plan = Plan.objects.filter(name__iexact="Free").first()
 
-        # 4. Create Subscription
-        WorkspaceSubscription.objects.create(
-            tenant=tenant,
-            plan=free_plan,
-            status="active"
-        )
+                if not plan:
+                    return Response({"error": "Free plan not found"}, status=500)
 
-        return Response(
-            {
-                "id": tenant.id,
-                "name": tenant.name,
-                "message": "Workspace created successfully"
-            },
-            status=status.HTTP_201_CREATED
-        )
+                # 4. Create Subscription
+                WorkspaceSubscription.objects.create(
+                    tenant=tenant,
+                    plan=plan,
+                    status="active"
+                )
+
+            return Response({
+                "message": "Workspace created successfully",
+                "tenant_id": tenant.id
+            })
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
 
 class CurrentWorkspaceView(APIView):
     permission_classes = [IsAuthenticated]
