@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
-
+import Pricing from "./pages/Pricing";
 import Login from "./pages/Login";
 import DashboardHome from "./pages/DashboardHome";
 import ProjectsPage from "./pages/ProjectsPage";
@@ -50,6 +50,7 @@ function App() {
                 <Route path="projects" element={<ProjectsPage />} />
                 <Route path="members" element={<MembersPage />} />
                 <Route path="billing" element={<BillingPage />} />
+                <Route path="/pricing" element={<Pricing />} />
             </Route>
 
             {/* Fallback */}
