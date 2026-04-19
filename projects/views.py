@@ -2,13 +2,13 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
-
+from core.permissions import PlanLimitMixin
 from .models import Project
 from .serializers import ProjectSerializer
 from tenants.mixins import TenantAccessMixin
 
 
-class ProjectListCreateView(TenantAccessMixin, APIView):
+class ProjectListCreateView(TenantAccessMixin, PlanLimitMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     # 🔹 GET → all members can view
@@ -27,11 +27,22 @@ class ProjectListCreateView(TenantAccessMixin, APIView):
         if error:
             return error
 
+        # 🔐 ROLE CHECK
         if membership.role != "admin":
             return Response(
                 {"detail": "Only admins can create projects."},
                 status=403
             )
+
+        # 🔒 SUBSCRIPTION CHECK
+        resp = self.check_subscription(tenant)
+        if resp:
+            return resp
+
+        # 🔒 PROJECT LIMIT CHECK
+        resp = self.check_project_limit(tenant)
+        if resp:
+            return resp
 
         name = request.data.get("name")
         description = request.data.get("description", "")

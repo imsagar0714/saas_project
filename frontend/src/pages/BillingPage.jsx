@@ -6,6 +6,7 @@ function BillingPage() {
     const [plans, setPlans] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    // 🔥 Fetch current billing + plans
     const fetchBillingData = async () => {
         try {
             setLoading(true);
@@ -17,8 +18,9 @@ function BillingPage() {
 
             setCurrentBilling(currentRes.data);
             setPlans(plansRes.data);
+
         } catch (error) {
-            console.error("Failed to fetch billing data:", error);
+            console.error("Billing fetch error:", error);
         } finally {
             setLoading(false);
         }
@@ -28,142 +30,119 @@ function BillingPage() {
         fetchBillingData();
     }, []);
 
+    // 🔥 HANDLE UPGRADE (RAZORPAY FLOW)
+    const handleUpgrade = async (planId) => {
+        try {
+            // STEP 1 → create subscription from backend
+            const res = await API.post("/billing/subscribe/", {
+                plan_id: planId,
+                billing_cycle: "monthly",
+            });
+
+            const { subscription_id, razorpay_key } = res.data;
+
+            // STEP 2 → Razorpay checkout config
+            const options = {
+                key: razorpay_key,
+                subscription_id: subscription_id,
+                name: "My SaaS",
+                description: "Subscription Plan",
+
+                handler: function (response) {
+                    // 🔥 This runs AFTER successful payment
+                    console.log("Payment success:", response);
+
+                    alert("Payment successful!");
+
+                    // 🔥 Refresh UI (important)
+                    fetchBillingData();
+                },
+
+                theme: {
+                    color: "#2563eb",
+                },
+            };
+
+            // STEP 3 → open Razorpay popup
+            const rzp = new window.Razorpay(options);
+            rzp.open();
+
+        } catch (err) {
+            console.error("Upgrade error:", err);
+            alert("Payment failed");
+        }
+    };
+
     if (loading) {
-        return <p className="text-slate-300">Loading billing info...</p>;
+        return (
+            <div className="text-white text-center mt-20">
+                Loading billing data...
+            </div>
+        );
     }
 
     return (
-        <div className="space-y-8">
-            {/* Current Plan */}
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-lg backdrop-blur">
-                <h2 className="mb-4 text-2xl font-bold text-white">Current Subscription</h2>
+        <div className="p-6 text-white">
+            <h1 className="text-3xl font-bold mb-6">Billing</h1>
+
+            {/* 🔥 CURRENT PLAN */}
+            <div className="mb-8 p-6 rounded-2xl bg-gray-900 border border-gray-700">
+                <h2 className="text-xl font-semibold mb-2">Current Plan</h2>
 
                 {currentBilling ? (
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                        <div className="rounded-2xl bg-slate-900/80 p-5">
-                            <p className="text-sm text-slate-400">Workspace</p>
-                            <h3 className="mt-2 text-xl font-semibold text-white">
-                                {currentBilling.tenant_name}
-                            </h3>
-                        </div>
+                    <>
+                        <p>Plan: <b>{currentBilling.plan?.name}</b></p>
+                        <p>Status: {currentBilling.status}</p>
+                        <p>Billing: {currentBilling.billing_cycle}</p>
 
-                        <div className="rounded-2xl bg-slate-900/80 p-5">
-                            <p className="text-sm text-slate-400">Current Plan</p>
-                            <h3 className="mt-2 text-xl font-semibold text-white">
-                                {currentBilling.plan?.name}
-                            </h3>
+                        <div className="mt-4">
+                            <p>Max Projects: {currentBilling.plan?.max_projects}</p>
+                            <p>Max Members: {currentBilling.plan?.max_members}</p>
                         </div>
-
-                        <div className="rounded-2xl bg-slate-900/80 p-5">
-                            <p className="text-sm text-slate-400">Status</p>
-                            <h3 className="mt-2 text-xl font-semibold text-white capitalize">
-                                {currentBilling.status}
-                            </h3>
-                        </div>
-
-                        <div className="rounded-2xl bg-slate-900/80 p-5">
-                            <p className="text-sm text-slate-400">Billing Cycle</p>
-                            <h3 className="mt-2 text-xl font-semibold text-white capitalize">
-                                {currentBilling.billing_cycle}
-                            </h3>
-                        </div>
-                    </div>
+                    </>
                 ) : (
-                    <p className="text-slate-400">No billing data found.</p>
+                    <p>No active subscription</p>
                 )}
             </div>
 
-            {/* Limits */}
-            {currentBilling?.plan && (
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-lg backdrop-blur">
-                    <h2 className="mb-4 text-2xl font-bold text-white">Current Plan Limits</h2>
+            {/* 🔥 ALL PLANS */}
+            <div className="grid md:grid-cols-3 gap-6">
+                {plans.map((plan) => {
+                    const isCurrent =
+                        currentBilling?.plan?.id === plan.id;
 
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                        <div className="rounded-2xl bg-slate-900/80 p-5">
-                            <p className="text-sm text-slate-400">Max Members</p>
-                            <h3 className="mt-2 text-xl font-semibold text-white">
-                                {currentBilling.plan.max_members}
-                            </h3>
-                        </div>
+                    return (
+                        <div
+                            key={plan.id}
+                            className="p-6 rounded-2xl bg-gray-800 border border-gray-700"
+                        >
+                            <h2 className="text-2xl font-semibold">
+                                {plan.name}
+                            </h2>
 
-                        <div className="rounded-2xl bg-slate-900/80 p-5">
-                            <p className="text-sm text-slate-400">Max Projects</p>
-                            <h3 className="mt-2 text-xl font-semibold text-white">
-                                {currentBilling.plan.max_projects}
-                            </h3>
-                        </div>
+                            <p className="text-3xl mt-3 font-bold">
+                                ₹{plan.price_monthly}
+                            </p>
 
-                        <div className="rounded-2xl bg-slate-900/80 p-5">
-                            <p className="text-sm text-slate-400">Invitations</p>
-                            <h3 className="mt-2 text-xl font-semibold text-white">
-                                {currentBilling.plan.can_invite ? "Enabled" : "Disabled"}
-                            </h3>
-                        </div>
+                            <div className="mt-4 text-sm text-gray-300">
+                                <p>Projects: {plan.max_projects}</p>
+                                <p>Members: {plan.max_members}</p>
+                            </div>
 
-                        <div className="rounded-2xl bg-slate-900/80 p-5">
-                            <p className="text-sm text-slate-400">Priority Support</p>
-                            <h3 className="mt-2 text-xl font-semibold text-white">
-                                {currentBilling.plan.has_priority_support ? "Enabled" : "Disabled"}
-                            </h3>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Plans */}
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-lg backdrop-blur">
-                <h2 className="mb-6 text-2xl font-bold text-white">Available Plans</h2>
-
-                <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                    {plans.map((plan) => {
-                        const isCurrent = currentBilling?.plan?.id === plan.id;
-
-                        return (
-                            <div
-                                key={plan.id}
-                                className={`rounded-2xl border p-6 shadow-md ${
+                            <button
+                                onClick={() => handleUpgrade(plan.id)}
+                                disabled={isCurrent}
+                                className={`mt-6 w-full py-2 rounded-lg ${
                                     isCurrent
-                                        ? "border-blue-500 bg-blue-950/40"
-                                        : "border-white/10 bg-slate-900/80"
+                                        ? "bg-gray-600 cursor-not-allowed"
+                                        : "bg-blue-600 hover:bg-blue-500"
                                 }`}
                             >
-                                <div className="mb-4 flex items-center justify-between">
-                                    <h3 className="text-2xl font-bold text-white">{plan.name}</h3>
-                                    {isCurrent && (
-                                        <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
-                                            Current
-                                        </span>
-                                    )}
-                                </div>
-
-                                <p className="text-slate-300">
-                                    ₹{plan.price_monthly}/month
-                                </p>
-                                <p className="mb-4 text-sm text-slate-400">
-                                    ₹{plan.price_yearly}/year
-                                </p>
-
-                                <ul className="space-y-2 text-sm text-slate-300">
-                                    <li>👥 Max Members: {plan.max_members}</li>
-                                    <li>📁 Max Projects: {plan.max_projects}</li>
-                                    <li>✉️ Invite Members: {plan.can_invite ? "Yes" : "No"}</li>
-                                    <li>⚡ Priority Support: {plan.has_priority_support ? "Yes" : "No"}</li>
-                                </ul>
-
-                                <button
-                                    className={`mt-6 w-full rounded-2xl px-4 py-3 font-semibold text-white transition ${
-                                        isCurrent
-                                            ? "bg-slate-700 cursor-not-allowed"
-                                            : "bg-blue-600 hover:bg-blue-500"
-                                    }`}
-                                    disabled={isCurrent}
-                                >
-                                    {isCurrent ? "Current Plan" : "Upgrade (Coming Soon)"}
-                                </button>
-                            </div>
-                        );
-                    })}
-                </div>
+                                {isCurrent ? "Current Plan" : "Upgrade"}
+                            </button>
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );

@@ -12,6 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import Plan, WorkspaceSubscription
 from .serializers import PlanSerializer, WorkspaceSubscriptionSerializer
 from tenants.mixins import TenantAccessMixin
+from django.utils.decorators import method_decorator
 
 
 client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
@@ -132,3 +133,97 @@ def razorpay_webhook(request):
             pass
 
     return HttpResponse(status=200)
+
+class VerifyPaymentView(TenantAccessMixin, APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        tenant, membership, error = self.get_active_membership(request)
+        if error:
+            return error
+
+        client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+
+        data = {
+            'razorpay_payment_id': request.data.get('razorpay_payment_id'),
+            'razorpay_subscription_id': request.data.get('razorpay_subscription_id'),
+            'razorpay_signature': request.data.get('razorpay_signature'),
+        }
+
+        try:
+            client.utility.verify_payment_signature(data)
+
+            subscription = tenant.subscription
+            subscription.status = "active"
+            subscription.save()
+
+            return Response({"detail": "Payment verified"})
+
+        except:
+            return Response({"detail": "Invalid signature"}, status=400)
+        
+@method_decorator(csrf_exempt, name='dispatch')
+class RazorpayWebhookView(APIView):
+    authentication_classes = []   # no auth
+    permission_classes = []       # public endpoint
+
+    def post(self, request):
+        client = razorpay.Client(
+            auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
+        )
+
+        body = request.body
+        signature = request.headers.get("X-Razorpay-Signature")
+
+        try:
+            client.utility.verify_webhook_signature(
+                body,
+                signature,
+                settings.RAZORPAY_WEBHOOK_SECRET
+            )
+        except:
+            return Response({"error": "Invalid signature"}, status=400)
+
+        payload = json.loads(body)
+        event = payload.get("event")
+
+        print("Webhook received:", event)
+
+        # 🔥 HANDLE EVENTS
+        if event == "subscription.charged":
+            sub_id = payload["payload"]["subscription"]["entity"]["id"]
+
+            try:
+                subscription = WorkspaceSubscription.objects.get(
+                    provider_subscription_id=sub_id
+                )
+                subscription.status = "active"
+                subscription.save()
+            except:
+                pass
+
+        elif event == "subscription.payment_failed":
+            sub_id = payload["payload"]["subscription"]["entity"]["id"]
+
+            try:
+                subscription = WorkspaceSubscription.objects.get(
+                    provider_subscription_id=sub_id
+                )
+                subscription.status = "past_due"
+                subscription.save()
+            except:
+                pass
+
+        elif event == "subscription.cancelled":
+            sub_id = payload["payload"]["subscription"]["entity"]["id"]
+
+            try:
+                subscription = WorkspaceSubscription.objects.get(
+                    provider_subscription_id=sub_id
+                )
+                subscription.status = "cancelled"
+                subscription.save()
+            except:
+                pass
+
+        return Response({"status": "ok"})

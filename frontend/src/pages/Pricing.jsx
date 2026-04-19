@@ -40,9 +40,19 @@ function Pricing() {
         name: "My SaaS",
         description: `${plan.name} Plan Subscription`,
 
-        handler: function (response) {
-          console.log("PAYMENT SUCCESS:", response);
-          alert("Payment successful 🎉");
+        handler: async function (response) {
+          try {
+            await API.post("/billing/verify/", {
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_subscription_id: response.razorpay_subscription_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+
+            alert("Payment verified & subscription activated 🚀");
+          } catch (err) {
+            console.error(err);
+            alert("Payment verification failed");
+          }
         },
 
         modal: {
