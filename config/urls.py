@@ -7,6 +7,6 @@ urlpatterns = [
     path('api/', include('accounts.urls')),
     path('api/', include('tenants.urls')),
     path('api/', include('projects.urls')),
-    path("api/billing/", include("billing.urls")),
+    path("api/", include("billing.urls")), 
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]
