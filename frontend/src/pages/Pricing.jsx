@@ -1,18 +1,36 @@
+import { useEffect, useState } from "react";
 import API from "../api";
 
 function Pricing() {
-  const plans = [
-    { id: 1, name: "Free", price: 0 },
-    { id: 2, name: "Pro", price: 499 },
-    { id: 3, name: "Business", price: 999 },
-  ];
+  const [plans, setPlans] = useState([]);
 
-  const handleSubscribe = async (planId) => {
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const res = await API.get("/plans/");
+        setPlans(res.data);
+      } catch (err) {
+        console.error("Error fetching plans", err);
+      }
+    };
+
+    fetchPlans();
+  }, []);
+
+  const handleSubscribe = async (plan) => {
     try {
+      // ❌ Skip free plan
+      if (plan.name.toLowerCase() === "free") {
+        alert("Free plan activated (no payment needed)");
+        return;
+      }
+
       const res = await API.post("/subscribe/", {
-        plan_id: planId,
+        plan_id: plan.id,
         billing_cycle: "monthly",
       });
+
+      console.log("SUBSCRIBE RESPONSE:", res.data);
 
       const { subscription_id, razorpay_key } = res.data;
 
@@ -20,10 +38,17 @@ function Pricing() {
         key: razorpay_key,
         subscription_id: subscription_id,
         name: "My SaaS",
-        description: "Subscription",
+        description: `${plan.name} Plan Subscription`,
 
-        handler: function () {
-          alert("Payment successful");
+        handler: function (response) {
+          console.log("PAYMENT SUCCESS:", response);
+          alert("Payment successful 🎉");
+        },
+
+        modal: {
+          ondismiss: function () {
+            console.log("Payment popup closed");
+          },
         },
 
         theme: {
@@ -35,8 +60,8 @@ function Pricing() {
       rzp.open();
 
     } catch (err) {
-      console.error(err);
-      alert("Payment failed");
+      console.error("SUBSCRIBE ERROR:", err.response?.data || err);
+      alert(JSON.stringify(err.response?.data || "Payment failed"));
     }
   };
 
@@ -55,14 +80,14 @@ function Pricing() {
             <h2 className="text-2xl font-semibold">{plan.name}</h2>
 
             <h3 className="text-3xl mt-4 font-bold">
-              ₹{plan.price}
+              ₹{plan.price_monthly}
             </h3>
 
             <button
               className="mt-6 w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-500"
-              onClick={() => handleSubscribe(plan.id)}
+              onClick={() => handleSubscribe(plan)}
             >
-              Buy Now
+              {plan.name === "Free" ? "Start Free" : "Buy Now"}
             </button>
           </div>
         ))}
