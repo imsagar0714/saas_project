@@ -7,7 +7,8 @@ function Pricing() {
   useEffect(() => {
     const fetchPlans = async () => {
       try {
-        const res = await API.get("/plans/");
+        // ✅ FIXED ROUTE
+        const res = await API.get("/billing/plans/");
         setPlans(res.data);
       } catch (err) {
         console.error("Error fetching plans", err);
@@ -25,7 +26,8 @@ function Pricing() {
         return;
       }
 
-      const res = await API.post("/subscribe/", {
+      // ✅ FIXED ROUTE
+      const res = await API.post("/billing/subscribe/", {
         plan_id: plan.id,
         billing_cycle: "monthly",
       });
@@ -42,6 +44,7 @@ function Pricing() {
 
         handler: async function (response) {
           try {
+            // ✅ FIXED ROUTE
             await API.post("/billing/verify/", {
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_subscription_id: response.razorpay_subscription_id,
