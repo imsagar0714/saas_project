@@ -100,39 +100,6 @@ class CreateSubscriptionView(TenantAccessMixin, APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=500)
-        
-@csrf_exempt
-def razorpay_webhook(request):
-    import json
-
-    body = request.body
-    signature = request.headers.get("X-Razorpay-Signature")
-
-    expected_signature = hmac.new(
-        bytes(settings.RAZORPAY_WEBHOOK_SECRET, 'utf-8'),
-        body,
-        hashlib.sha256
-    ).hexdigest()
-
-    if not hmac.compare_digest(expected_signature, signature):
-        return HttpResponse(status=400)
-
-    data = json.loads(body)
-
-    # ✅ Subscription activated
-    if data["event"] == "subscription.activated":
-        sub_id = data["payload"]["subscription"]["entity"]["id"]
-
-        try:
-            subscription = WorkspaceSubscription.objects.get(
-                provider_subscription_id=sub_id
-            )
-            subscription.status = "active"
-            subscription.save()
-        except WorkspaceSubscription.DoesNotExist:
-            pass
-
-    return HttpResponse(status=200)
 
 class VerifyPaymentView(TenantAccessMixin, APIView):
     permission_classes = [IsAuthenticated]
@@ -164,66 +131,53 @@ class VerifyPaymentView(TenantAccessMixin, APIView):
         
 @method_decorator(csrf_exempt, name='dispatch')
 class RazorpayWebhookView(APIView):
-    authentication_classes = []   # no auth
-    permission_classes = []       # public endpoint
+    authentication_classes = []
+    permission_classes = []
 
     def post(self, request):
-        client = razorpay.Client(
-            auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
-        )
-
-        body = request.body
-        signature = request.headers.get("X-Razorpay-Signature")
-
         try:
-            client.utility.verify_webhook_signature(
+            body = request.body
+            received_signature = request.headers.get("X-Razorpay-Signature")
+
+            # 🔥 Secure signature verification
+            generated_signature = hmac.new(
+                bytes(settings.RAZORPAY_WEBHOOK_SECRET, 'utf-8'),
                 body,
-                signature,
-                settings.RAZORPAY_WEBHOOK_SECRET
-            )
-        except:
-            return Response({"error": "Invalid signature"}, status=400)
+                hashlib.sha256
+            ).hexdigest()
 
-        payload = json.loads(body)
-        event = payload.get("event")
+            if not hmac.compare_digest(generated_signature, received_signature):
+                return Response({"error": "Invalid signature"}, status=400)
 
-        print("Webhook received:", event)
+            data = json.loads(body)
+            event = data.get("event")
 
-        # 🔥 HANDLE EVENTS
-        if event == "subscription.charged":
-            sub_id = payload["payload"]["subscription"]["entity"]["id"]
+            print("🔥 WEBHOOK EVENT:", event)
 
-            try:
-                subscription = WorkspaceSubscription.objects.get(
-                    provider_subscription_id=sub_id
-                )
-                subscription.status = "active"
-                subscription.save()
-            except:
-                pass
+            if event == "subscription.activated":
+                subscription_id = data["payload"]["subscription"]["entity"]["id"]
 
-        elif event == "subscription.payment_failed":
-            sub_id = payload["payload"]["subscription"]["entity"]["id"]
+                try:
+                    sub = WorkspaceSubscription.objects.get(
+                        provider_subscription_id=subscription_id
+                    )
+                    sub.status = "active"
+                    sub.save()
+                    print("✅ Subscription activated")
 
-            try:
-                subscription = WorkspaceSubscription.objects.get(
-                    provider_subscription_id=sub_id
-                )
-                subscription.status = "past_due"
-                subscription.save()
-            except:
-                pass
+                except WorkspaceSubscription.DoesNotExist:
+                    print("❌ Subscription not found")
 
-        elif event == "subscription.cancelled":
-            sub_id = payload["payload"]["subscription"]["entity"]["id"]
+            elif event == "subscription.charged":
+                print("💰 Recurring payment success")
 
-            try:
-                subscription = WorkspaceSubscription.objects.get(
-                    provider_subscription_id=sub_id
-                )
-                subscription.status = "cancelled"
-                subscription.save()
-            except:
-                pass
+            elif event == "payment.captured":
+                print("💵 Payment captured")
+                
+            print("🔥 WEBHOOK EVENT:", event)
 
-        return Response({"status": "ok"})
+            return Response({"status": "success"})
+
+        except Exception as e:
+            print("❌ Webhook error:", str(e))
+            return Response({"error": str(e)}, status=500)
