@@ -1,128 +1,165 @@
-🚀 Multi-Tenant SaaS Platform
+# 🚀 Multi-Tenant SaaS Platform
 
-A production-ready Multi-Tenant SaaS Application built with Django, Django REST Framework, React, PostgreSQL, Celery, Redis, and Razorpay. The platform enables organizations to create and manage isolated workspaces, invite team members, manage subscriptions, and collaborate securely within their own tenant environment.
+A production-ready Multi-Tenant SaaS Platform built with Django, Django REST Framework, React, PostgreSQL, Celery, Redis, and Razorpay.
 
-📌 Project Overview
+This application allows multiple organizations (tenants) to use the same platform while keeping their data completely isolated and secure. Organizations can manage projects, invite team members, handle subscriptions, and collaborate within their own workspace.
 
-This project is designed using a modern SaaS architecture where multiple organizations (tenants) share the same application while keeping their data completely isolated.
+---
 
-Each tenant can:
+## 📖 Overview
 
-Create and manage projects
-Invite and manage team members
-Assign roles and permissions
-Subscribe to paid plans
-Access APIs securely using JWT authentication
-Perform background operations using Celery workers
+Modern SaaS products need to support multiple customers on a single platform without compromising security or scalability.
 
-The application follows an API-first architecture, making it easy to integrate with mobile applications, AI services, and third-party platforms in the future.
+This project implements:
 
-🏗️ Architecture
-┌─────────────────────┐
-│     React Frontend  │
-│      (Vite)         │
-└──────────┬──────────┘
-           │ REST API
-           ▼
-┌─────────────────────┐
-│ Django REST API     │
-│  (DRF Backend)      │
-└──────────┬──────────┘
+- Multi-Tenant Architecture
+- JWT Authentication
+- Role-Based Access Control (RBAC)
+- Team & Workspace Management
+- Project Management
+- Subscription & Billing System
+- Background Task Processing
+- RESTful APIs
+- Production-Ready Deployment Architecture
+
+The platform follows an API-first approach, making it easy to integrate with web, mobile, and third-party applications.
+
+---
+
+## ✨ Features
+
+### 🔐 Authentication & Security
+
+- User Registration
+- Secure Login System
+- JWT Authentication
+- Access & Refresh Tokens
+- Password Validation
+- Protected API Endpoints
+- Role-Based Access Control (RBAC)
+
+### 🏢 Multi-Tenancy
+
+- Organization Creation
+- Tenant Isolation
+- Separate Workspace for Every Organization
+- Tenant-Aware APIs
+- Secure Data Segregation
+
+### 👥 Team Management
+
+- Invite Team Members
+- Manage Organization Users
+- Assign Roles & Permissions
+- Workspace Ownership Management
+
+### 📁 Project Management
+
+- Create Projects
+- Update Projects
+- Delete Projects
+- Project Ownership
+- Tenant-Specific Project Access
+
+### 💳 Subscription & Billing
+
+- Razorpay Integration
+- Subscription Plans
+- Payment Verification
+- Billing Management
+- Subscription Tracking
+
+### ⚡ Background Tasks
+
+Powered by Celery & Redis:
+
+- Email Processing
+- Member Invitations
+- Asynchronous Jobs
+- Scheduled Tasks
+- Long Running Background Operations
+
+---
+
+## 🏗️ System Architecture
+
+```text
+┌──────────────────────┐
+│    React Frontend    │
+│       (Vite)         │
+└──────────┬───────────┘
            │
- ┌─────────┼─────────┐
- │         │         │
- ▼         ▼         ▼
-JWT      Celery    Razorpay
-Auth     Worker    Payments
- │         │
- ▼         ▼
-Redis   Background Tasks
-
-           │
+           │ REST APIs
            ▼
-    PostgreSQL (Neon)
-✨ Features
-Authentication & Authorization
-JWT Authentication
-Secure Login & Registration
-Token Refresh Mechanism
-Password Validation
-Protected APIs
-Role-Based Access Control (RBAC)
-Multi-Tenancy
-Organization/Tenant Creation
-Tenant Isolation
-Tenant Middleware
-Separate Workspace per Organization
-Secure Data Segregation
-Scalable Tenant Architecture
-Team Management
-Invite Members
-Manage Team Access
-Assign Roles
-Organization Ownership
-Permission-Based Actions
-Project Management
-Create Projects
-Update Projects
-Delete Projects
-Project Ownership
-Tenant-Specific Projects
-Subscription & Billing
-Razorpay Payment Gateway Integration
-Subscription Plans
-Plan Management
-Payment Verification
-Subscription Tracking
-Background Processing
+┌──────────────────────┐
+│ Django REST Backend  │
+│        (DRF)         │
+└──────────┬───────────┘
+           │
+     ┌─────┼─────┐
+     │     │     │
+     ▼     ▼     ▼
+   JWT   Celery Razorpay
+  Auth  Workers Payments
 
-Using Celery + Redis:
+     │
+     ▼
+   Redis
 
-Email Sending
-Member Invitations
-Async Tasks
-Scheduled Jobs
-Long Running Processes
-REST APIs
+     │
+     ▼
+ PostgreSQL
+   (Neon)
+```
 
-The backend exposes RESTful APIs for:
+---
 
-/auth/
-/tenants/
-/projects/
-/billing/
-/users/
-🛠️ Tech Stack
-Backend
-Python
-Django
-Django REST Framework (DRF)
-Simple JWT
-Celery
-Redis
-PostgreSQL
-WhiteNoise
-Frontend
-React
-Vite
-Axios
-React Router
-Database
-PostgreSQL (Neon)
-Payments
-Razorpay
-Deployment
-Railway (Backend)
-Vercel (Frontend)
-Neon (Database)
-DevOps & Tools
-Docker
-Docker Compose
-Git
-GitHub
-Environment Variables
-CI/CD Ready Architecture
-📂 Project Structure
+## 🛠️ Tech Stack
+
+### Backend
+
+- Python
+- Django
+- Django REST Framework (DRF)
+- Simple JWT
+- Celery
+- Redis
+
+### Frontend
+
+- React
+- Vite
+- Axios
+- React Router
+
+### Database
+
+- PostgreSQL (Neon)
+
+### Payments
+
+- Razorpay
+
+### Deployment
+
+- Railway (Backend)
+- Vercel (Frontend)
+- Neon (Database)
+
+### DevOps & Tools
+
+- Docker
+- Docker Compose
+- Git
+- GitHub
+- Environment Variables
+- CI/CD Ready Setup
+
+---
+
+## 📂 Project Structure
+
+```text
 saas_project/
 │
 ├── accounts/
@@ -133,17 +170,17 @@ saas_project/
 ├── tenants/
 │   ├── models.py
 │   ├── middleware.py
+│   ├── serializers.py
 │   ├── views.py
 │
 ├── projects/
 │   ├── models.py
+│   ├── serializers.py
 │   ├── views.py
 │
 ├── billing/
 │   ├── models.py
 │   ├── views.py
-│
-├── core/
 │
 ├── config/
 │   ├── settings.py
@@ -151,132 +188,264 @@ saas_project/
 │   ├── celery.py
 │
 ├── frontend/
-│   ├── src/
-│   ├── components/
-│   ├── pages/
 │
 ├── requirements.txt
 ├── Dockerfile
 ├── docker-compose.yml
 └── README.md
-🔒 Security Features
-JWT-Based Authentication
-Secure Password Hashing
-Permission-Based Access
-Tenant Isolation
-Environment Variable Configuration
-Protected Endpoints
-CORS Configuration
-Production Security Settings
-⚡ Background Tasks with Celery
+```
 
-Example Flow:
+---
 
+## 🔒 Security Features
+
+- JWT Authentication
+- Password Hashing
+- Protected API Routes
+- Tenant Isolation
+- Environment-Based Configuration
+- Secure Payment Verification
+- CORS Protection
+- Production Security Settings
+
+---
+
+## ⚡ Background Task Flow
+
+```text
 User Invites Team Member
-            │
-            ▼
-Invite API Called
-            │
-            ▼
-Celery Task Created
-            │
-            ▼
-Redis Queue
-            │
-            ▼
-Celery Worker Executes
-            │
-            ▼
-Invitation Email Sent
-🚀 Local Setup
-Clone Repository
+           │
+           ▼
+      API Request
+           │
+           ▼
+     Celery Task
+           │
+           ▼
+      Redis Queue
+           │
+           ▼
+     Celery Worker
+           │
+           ▼
+      Email Sent
+```
+
+---
+
+## 🚀 Getting Started
+
+### 1. Clone Repository
+
+```bash
 git clone https://github.com/yourusername/saas_project.git
 
 cd saas_project
-Create Virtual Environment
+```
+
+### 2. Create Virtual Environment
+
+#### Windows
+
+```bash
 python -m venv venv
-Windows
 venv\Scripts\activate
-Linux/Mac
+```
+
+#### Linux / Mac
+
+```bash
+python3 -m venv venv
 source venv/bin/activate
-Install Dependencies
+```
+
+### 3. Install Dependencies
+
+```bash
 pip install -r requirements.txt
-Configure Environment Variables
+```
 
-Create .env
+### 4. Configure Environment Variables
 
+Create a `.env` file in the root directory:
+
+```env
 SECRET_KEY=your-secret-key
 
 DEBUG=True
 
-DATABASE_URL=postgresql://...
+DATABASE_URL=postgresql://username:password@host/database
 
 REDIS_URL=redis://localhost:6379
 
-RAZORPAY_KEY_ID=your-key
+RAZORPAY_KEY_ID=your_key
 
-RAZORPAY_KEY_SECRET=your-secret
+RAZORPAY_KEY_SECRET=your_secret
 
-EMAIL_HOST_USER=your-email
+EMAIL_HOST_USER=your_email
 
-EMAIL_HOST_PASSWORD=your-password
-Apply Migrations
+EMAIL_HOST_PASSWORD=your_password
+```
+
+### 5. Apply Database Migrations
+
+```bash
 python manage.py migrate
-Create Superuser
+```
+
+### 6. Create Superuser
+
+```bash
 python manage.py createsuperuser
-Run Server
+```
+
+### 7. Run Development Server
+
+```bash
 python manage.py runserver
-Run Celery Worker
+```
+
+### 8. Start Celery Worker
+
+```bash
 celery -A config worker -l info
-🌐 Deployment
-Backend
+```
 
-Deploy Django backend on Railway.
+---
 
-Frontend
+## 📡 API Modules
 
-Deploy React frontend on Vercel.
+### Authentication
 
-Database
+```text
+/api/auth/register/
+/api/auth/login/
+/api/auth/token/refresh/
+```
 
-Use Neon PostgreSQL.
+### Tenants
 
-Static Files
+```text
+/api/tenants/
+/api/tenants/invite/
+```
 
-Served using WhiteNoise.
+### Projects
 
-📈 Scalability Considerations
-Multi-Tenant Architecture
-API-First Design
-Background Task Processing
-PostgreSQL for Production Workloads
-Redis Queue System
-Docker Support
-Cloud Deployment Ready
-Modular Application Structure
-🔮 Future Enhancements
-Stripe Integration
-AI-Powered Features
-Audit Logs
-Activity Tracking
-Real-Time Notifications
-WebSockets
-Elasticsearch Search
-Analytics Dashboard
-Advanced Team Permissions
-SaaS Metrics & Reporting
-👨‍💻 Developer
+```text
+/api/projects/
+```
 
-Sagar Shukla
+### Billing
 
-Backend Developer focused on building scalable SaaS products using:
+```text
+/api/billing/
+```
 
-Python
-Django
-Django REST Framework
-React
-PostgreSQL
-Celery
-Redis
-Docker
-Cloud Deployment
+### Users
+
+```text
+/api/users/
+```
+
+---
+
+## 🌍 Deployment Architecture
+
+### Backend
+
+- Railway
+
+### Frontend
+
+- Vercel
+
+### Database
+
+- Neon PostgreSQL
+
+### Background Workers
+
+- Celery + Redis
+
+### Static Files
+
+- WhiteNoise
+
+---
+
+## 📈 Scalability Features
+
+- Multi-Tenant Design
+- Modular Architecture
+- RESTful APIs
+- Background Task Processing
+- PostgreSQL Database
+- Redis Queue System
+- Docker Support
+- Cloud Deployment Ready
+- Horizontal Scaling Friendly
+
+---
+
+## 🔮 Future Enhancements
+
+- Stripe Integration
+- AI-Powered Features
+- Elasticsearch Integration
+- Audit Logs
+- Activity Tracking
+- Analytics Dashboard
+- SaaS Metrics
+- Real-Time Notifications
+- WebSocket Support
+- Advanced Permission System
+
+---
+
+## 👨‍💻 Developer
+
+### Sagar Shukla
+
+Backend Developer passionate about building scalable SaaS applications using modern technologies.
+
+**Core Skills**
+
+- Python
+- Django
+- Django REST Framework
+- React
+- PostgreSQL
+- Celery
+- Redis
+- Docker
+- REST APIs
+- Cloud Deployment
+
+---
+
+## ⭐ Key Highlights
+
+✔ Multi-Tenant Architecture
+
+✔ JWT Authentication
+
+✔ Role-Based Access Control (RBAC)
+
+✔ Background Task Processing with Celery
+
+✔ Payment Gateway Integration
+
+✔ RESTful API Design
+
+✔ Dockerized Development Environment
+
+✔ PostgreSQL Database Design
+
+✔ Production Deployment Ready
+
+✔ Scalable SaaS Architecture
+
+---
+
+If you found this project useful, consider giving it a ⭐ on GitHub.
